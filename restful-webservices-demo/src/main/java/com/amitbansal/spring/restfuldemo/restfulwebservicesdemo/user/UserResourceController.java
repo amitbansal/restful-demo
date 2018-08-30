@@ -3,7 +3,11 @@ package com.amitbansal.spring.restfuldemo.restfulwebservicesdemo.user;
 import java.net.URI;
 import java.util.List;
 
+import javax.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.Resource;
+import org.springframework.hateoas.mvc.ControllerLinkBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,23 +16,30 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.*;
 
 @RestController
 public class UserResourceController {
 	@Autowired
 	private UserDaoService service;
 
+	
+	
 	@GetMapping(path = "/users")
 	public List<User> retrieveAllUsers() {
 		return service.findAll();
 	}
 	@GetMapping(path = "/user/{id}")
-	public User retrieveUser(@PathVariable int id) {
+	public Resource<User> retrieveUser(@PathVariable int id) {
 		User user =  service.findOne(id);
 		if(user == null){
 			throw new UserNotFoundException("id is"+id);
 		}
-		return user;
+		Resource<User> resource = new Resource<User>(user);
+		ControllerLinkBuilder linkTo = linkTo(methodOn(this.getClass()).retrieveAllUsers());
+		resource.add(linkTo.withRel("all-users"));
+		
+		return resource;
 	}
 	
 	@DeleteMapping(path = "/user/{id}")
@@ -37,10 +48,11 @@ public class UserResourceController {
 		if(user == null){
 			throw new UserNotFoundException("id is"+id);
 		}		
+		
 	}
 	
 	@PostMapping("/users")
-	public ResponseEntity<Object> createUser(@RequestBody User user){
+	public ResponseEntity<Object> createUser(@Valid @RequestBody User user){
 		User savedUser  = service.save(user);
 		//created
 		//expose the URI of the created user in the response.
